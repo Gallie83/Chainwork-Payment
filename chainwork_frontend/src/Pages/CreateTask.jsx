@@ -1,8 +1,23 @@
 import React from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { usePayment } from '../Context/PaymentContext'
 
 export function CreateTask() {
+  const { account, loading, connectWallet} = usePayment();
+
+  // Test to ensure everything is connected
+  const testConnection = async () => {
+    try {
+      console.log("Starting connection test...");
+      const result = await connectWallet();
+      console.log("Connection result:", result);
+      console.log("Current account state:", account);
+    } catch (error) {
+      console.error("Connection failed:", error)
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
@@ -127,6 +142,7 @@ export function CreateTask() {
                 <Button>Next</Button>
               </div>
             </form>
+                <Button onClick={testConnection}>Connect MetaMask</Button>
           </Card.Content>
         </Card>
       </div>

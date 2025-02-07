@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { connectWallet, handleNetworkChange } from '../utils/web3Utils';
 
 const PaymentContext = createContext();
 
@@ -41,11 +42,22 @@ export const PaymentProvider = ({ children }) => {
     const handleConnect = async () => {
       try {
         setLoading(true);
+        console.log("Starting Wallet connection...");
+
+        if(!window.ethereum) {
+          throw new Error("MetaMask not installed!")
+        }
+
         const address = await connectWallet();
+        console.log("Received addy:", address);
+
         setAccount(address);
         setError(null);
+
+        return address;
       } catch (err) {
         setError(err.message);
+        console.error(err)
       } finally {
         setLoading(false);
       }

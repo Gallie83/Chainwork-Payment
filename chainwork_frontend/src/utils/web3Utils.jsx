@@ -6,7 +6,8 @@ export const connectWallet = async () => {
       throw new Error('Please install MetaMask to use this feature');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    console.log("Requesting accounts...");
+    const provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send('eth_requestAccounts', []);
     const signer = provider.getSigner();
     return await signer.getAddress();
