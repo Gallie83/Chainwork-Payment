@@ -7,21 +7,24 @@ import { SubmitTask } from './Pages/SubmitTask';
 import { ReviewSubmission } from './Pages/ReviewSubmission';
 import { CreateTask } from './Pages/CreateTask';
 import { Profile } from './Pages/Profile';
+import { PaymentProvider } from './Context/PaymentContext';
 
 function App() {
   return (
-    <Router>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/submit-task" element={<SubmitTask />} />
-          <Route path="/review-submission/:id" element={<ReviewSubmission />} />
-          <Route path="/create-task" element={<CreateTask />} />
-          <Route path="/profile" element={<Profile />} />
-        </Routes>
-      </MainLayout>
-    </Router>
+    <PaymentProvider>
+      <Router>
+        <MainLayout>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/submit-task" element={<SubmitTask />} />
+            <Route path="/review-submission/:id" element={<ReviewSubmission />} />
+            <Route path="/create-task" element={<CreateTask />} />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        </MainLayout>
+      </Router>
+    </PaymentProvider>
   );
 }
 
