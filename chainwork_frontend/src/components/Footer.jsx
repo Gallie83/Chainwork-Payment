@@ -80,7 +80,7 @@ export function Footer() {
         
         <div className="mt-8 border-t border-gray-800 pt-8">
           <p className="text-center text-sm">
-            © {new Date().getFullYear()} Your Company. All rights reserved.
+            © {new Date().getFullYear()} ChainWork. All rights reserved.
           </p>
         </div>
       </div>

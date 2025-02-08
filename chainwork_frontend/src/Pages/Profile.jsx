@@ -26,26 +26,26 @@ export function Profile() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 ">
       <div className="max-w-4xl mx-auto">
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-3 ">
           <div>
-            <Card>
+            <Card className='dark:bg-gray-800 dark:text-white'>
               <Card.Content>
                 <div className="text-center">
-                  <div className="w-32 h-32 mx-auto bg-gray-200 rounded-full flex items-center justify-center">
+                  <div className="w-32 h-32 mx-auto bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
                     <User size={64} className="text-gray-400" />
                   </div>
-                  <h2 className="mt-4 text-xl font-semibold">John Doe</h2>
-                  <p className="text-gray-600">@johndoe</p>
+                  <h2 className="mt-4 text-xl font-semibold">Vansh Khanna</h2>
+                  <p className="text-gray-600 dark:text-white">@0xfabb</p>
                   <Button className="mt-4 w-full">Edit Profile</Button>
                 </div>
-                <div className="mt-6 space-y-4">
-                  <div className="flex items-center text-gray-600">
+                <div className="mt-6 space-y-4 ">
+                  <div className="flex items-center text-gray-600 dark:text-white">
                     <Mail size={20} className="mr-2" />
-                    john@example.com
+                    vanshkhanna541@gmail.com
                   </div>
-                  <div className="flex items-center text-gray-600">
+                  <div className="flex items-center text-gray-600 dark:text-white">
                     <Calendar size={20} className="mr-2" />
                     Joined March 2024
                   </div>
@@ -54,8 +54,8 @@ export function Profile() {
             </Card>
           </div>
 
-          <div className="md:col-span-2">
-            <Card>
+          <div className="md:col-span-2 ">
+            <Card className='dark:bg-gray-800 dark:text-white'>
               <Card.Header>
                 <h2 className="text-2xl font-semibold">Active Submissions</h2>
               </Card.Header>
@@ -64,7 +64,7 @@ export function Profile() {
                   {submissions.map((submission) => (
                     <div
                       key={submission.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg dark:bg-gray-800 dark:text-white"
                     >
                       <div>
                         <h3 className="font-medium">{submission.task}</h3>
@@ -80,7 +80,7 @@ export function Profile() {
                         }`}>
                           {submission.status}
                         </span>
-                        <Button variant="outline" size="sm">View</Button>
+                        <Button variant="outline" size="sm" className='hover:text-black'>View</Button>
                       </div>
                     </div>
                   ))}
