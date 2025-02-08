@@ -1,20 +1,92 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { usePayment } from '../Context/PaymentContext'
+import { ethers } from 'ethers'
+// import CoinGecko from 'coingecko-api';
 
 export function CreateTask() {
-  const { account, loading, connectWallet} = usePayment();
 
-  // Test to ensure everything is connected
-  const testConnection = async () => {
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  
+  const { account, loading, connectWallet, createTaskWithPayment} = usePayment();
+
+  // const coinGeckoClient = new CoinGecko();
+
+  // Monitor account changes
+  useEffect(() => {
+    if (account) {
+      setIsWalletConnected(true);
+    } else {
+      setIsWalletConnected(false);
+    }
+  }, [account]);
+
+  const handleSubmit = async(e) => {
+    e.preventDefault();
+
     try {
-      console.log("Starting connection test...");
-      const result = await connectWallet();
-      console.log("Connection result:", result);
-      console.log("Current account state:", account);
-    } catch (error) {
-      console.error("Connection failed:", error)
+      // 1. Check wallet connection
+      if (!isWalletConnected) {
+        await connectWallet();
+        alert('Connecting Metamask wallet try again')
+        // Exit function after conneting wallet
+        return; 
+      }
+      // 2. Get form values
+      const description = e.target.elements.description.value;
+      const amount = e.target.elements.amount.value;
+      const currency = e.target.elements.currency.value.toLowerCase();
+      const deadline = e.target.elements.deadline.value;
+
+      console.log(description,amount,currency,deadline)
+
+      // Get price of ETH in selected Currency(TODO: implement ETN instead of ETH)
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=${currency}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch ETH price');
+      }
+
+      const priceData = await response.json();
+      const ethPrice = priceData.ethereum[currency];
+
+      console.log("ETH:", {ethPrice})
+      const ethAmount = amount / ethPrice;
+
+      const weiAmount = ethers.parseEther(ethAmount.toFixed(6).toString());
+
+      // Show confirmation window with ETH to wei price
+      const confirmed = window.confirm(
+        `This task will cost ${ethAmount.toFixed(6)} ETH. Continue?`
+      )
+      if(confirmed) {
+        // Call to backend to create the task
+        const response = await fetch('api/chainwork/createTask', {
+          method: 'POST', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            description,
+            deadline,
+            bounty: weiAmount.toString(),
+            fromAddress: account
+          })
+        });
+
+        if(!response.ok) {
+          throw new Error('Failed to create task');
+        }
+
+        window.alert('Successfully created task!')
+        console.log('Success!')
+      }
+
+    } catch(error) {
+      console.error('Error creating task:', error)
     }
   }
 
@@ -33,7 +105,7 @@ export function CreateTask() {
 
         <Card>
           <Card.Content>
-            <form className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Title*
@@ -50,6 +122,7 @@ export function CreateTask() {
                   Description*
                 </label>
                 <textarea
+                  name='description'
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[150px]"
                   placeholder="Describe the task in detail..."
                 />
@@ -73,16 +146,18 @@ export function CreateTask() {
                       Amount*
                     </label>
                     <input
-                      type="text"
+                      type="number"
+                      name='amount'
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="$1000"
                     />
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Currency*
                     </label>
-                    <select className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select name="currency" className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <option value="">Select currency</option>
                       <option value="USD">USD</option>
                       <option value="EUR">EUR</option>
@@ -93,56 +168,24 @@ export function CreateTask() {
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-4">Deadline</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Month*
-                    </label>
-                    <select className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="">Select month</option>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                          {new Date(2024, i).toLocaleString('default', { month: 'long' })}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Day*
-                    </label>
-                    <select className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="">Select day</option>
-                      {Array.from({ length: 31 }, (_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                          {i + 1}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Year*
-                    </label>
-                    <select className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="">Select year</option>
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <option key={i} value={2024 + i}>
-                          {2024 + i}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Deadline*
+                </label>
+                <input 
+                  type="date"
+                  name="deadline"
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  min={new Date().toISOString().slice(0, 16)} // Prevents selecting past dates
+                />
               </div>
 
               <div className="flex justify-between pt-4">
                 <Button variant="secondary">Cancel</Button>
-                <Button>Next</Button>
+                <Button type="submit">
+                  {isWalletConnected ? 'Create Task' : 'Connect Wallet'}
+                </Button>
               </div>
             </form>
-                <Button onClick={testConnection}>Connect MetaMask</Button>
           </Card.Content>
         </Card>
       </div>

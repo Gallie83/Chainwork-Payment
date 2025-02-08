@@ -9,7 +9,10 @@ export const connectWallet = async () => {
     console.log("Requesting accounts...");
     const provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send('eth_requestAccounts', []);
-    const signer = provider.getSigner();
+
+    const signer = await provider.getSigner();
+    console.log("SIGNER:", signer)
+
     return await signer.getAddress();
   } catch (error) {
     console.error('Error connecting wallet:', error);
@@ -19,8 +22,8 @@ export const connectWallet = async () => {
 
 export const createEscrowPayment = async (fromAddress, taskDetails, bountyAmount) => {
   try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     // Convert bounty amount to wei
     const bountyInWei = ethers.utils.parseEther(bountyAmount.toString());

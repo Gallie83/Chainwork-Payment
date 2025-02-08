@@ -42,14 +42,12 @@ export const PaymentProvider = ({ children }) => {
     const handleConnect = async () => {
       try {
         setLoading(true);
-        console.log("Starting Wallet connection...");
 
         if(!window.ethereum) {
           throw new Error("MetaMask not installed!")
         }
 
         const address = await connectWallet();
-        console.log("Received addy:", address);
 
         setAccount(address);
         setError(null);
