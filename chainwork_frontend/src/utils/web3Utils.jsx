@@ -1,18 +1,59 @@
 import { ethers } from 'ethers';
 
+export const setupETNNetwork = async () => {
+  try {
+
+    const ETN_CHAIN_ID = '0xCB3E'; // 52014 in hex
+    console.log('Attempting to add/switch to chain ID:', ETN_CHAIN_ID);
+
+    // Try to switch to ETN network first
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: ETN_CHAIN_ID }],
+      });
+    } catch (switchError) {
+      console.log("SWITCH ERROR:", switchError);
+
+      // Network hasn't been added yet
+      if (switchError.code === 4902) {
+        console.log("Network not found, attempting to add...");
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: ETN_CHAIN_ID,
+            chainName: 'Electroneum Smart Chain Mainnet',
+            nativeCurrency: {
+              name: 'Electroneum',
+              symbol: 'ETN',
+              decimals: 18
+            },
+            rpcUrls: ['https://rpc.electroneum.com'],
+            blockExplorerUrls: ['https://blockexplorer.electroneum.com']
+          }]
+        });
+      } else {
+        throw switchError;
+      }
+    }
+} catch (error) {
+  console.error('Error setting up ETN network:', error);
+  throw error;
+}
+};
+
 export const connectWallet = async () => {
   try {
     if (!window.ethereum) {
       throw new Error('Please install MetaMask to use this feature');
     }
 
-    console.log("Requesting accounts...");
+    // Ensure ETN network connection
+    await setupETNNetwork();
+
     const provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send('eth_requestAccounts', []);
-
     const signer = await provider.getSigner();
-    console.log("SIGNER:", signer)
-
     return await signer.getAddress();
   } catch (error) {
     console.error('Error connecting wallet:', error);
@@ -20,13 +61,10 @@ export const connectWallet = async () => {
   }
 };
 
-export const createEscrowPayment = async (fromAddress, taskDetails, bountyAmount) => {
+export const createEscrowPayment = async (fromAddress, taskDetails, weiAmount) => {
   try {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
-
-    // Convert bounty amount to wei
-    const bountyInWei = ethers.utils.parseEther(bountyAmount.toString());
 
     // First, create task on backend
     const response = await fetch('/api/chainwork/createTask', {
@@ -36,7 +74,7 @@ export const createEscrowPayment = async (fromAddress, taskDetails, bountyAmount
       },
       body: JSON.stringify({
         ...taskDetails,
-        bounty: bountyInWei.toString(),
+        bounty: weiAmount.toString(),
         fromAddress
       })
     });
@@ -56,25 +94,20 @@ export const createEscrowPayment = async (fromAddress, taskDetails, bountyAmount
 
     // Wait for transaction to be mined
     await tx.wait();
-
     return tx.hash;
+
   } catch (error) {
     console.error('Error creating escrow payment:', error);
     throw error;
   }
 };
 
-export const handleNetworkChange = () => {
-  // Reload the page on network change as recommended by MetaMask
-  window.location.reload();
-};
-
 // Helper function to format ETN amounts
-export const formatETN = (amount) => {
+export const weiToETN = (amount) => {
   return ethers.utils.formatEther(amount);
 };
 
 // Helper function to parse ETN amounts
-export const parseETN = (amount) => {
+export const ETNToWei = (amount) => {
   return ethers.utils.parseEther(amount);
 };

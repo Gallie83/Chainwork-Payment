@@ -1,38 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { usePayment } from '../Context/PaymentContext'
-import { ethers } from 'ethers'
-// import CoinGecko from 'coingecko-api';
+import { usePayment } from '../Context/PaymentContext';
+import { ethers } from 'ethers';
 
 export function CreateTask() {
 
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   
-  const { account, loading, connectWallet, createTaskWithPayment} = usePayment();
-
-  // const coinGeckoClient = new CoinGecko();
-
-  // Monitor account changes
-  useEffect(() => {
-    if (account) {
-      setIsWalletConnected(true);
-    } else {
-      setIsWalletConnected(false);
-    }
-  }, [account]);
+  const { 
+    account, 
+    loading, 
+    error, 
+    isEtnNetwork, 
+    connectWallet, 
+    createTaskWithPayment
+  } = usePayment();
 
   const handleSubmit = async(e) => {
     e.preventDefault();
 
     try {
       // 1. Check wallet connection
-      if (!isWalletConnected) {
+      if (!account) {
         await connectWallet();
-        alert('Connecting Metamask wallet try again')
         // Exit function after conneting wallet
         return; 
       }
+      // Check network
+      if(!isEtnNetwork) {
+        throw new Error('Please switch to Electroneum network on MetaMask')
+      }
+
+      setSubmitting(true);
+
       // 2. Get form values
       const description = e.target.elements.description.value;
       const amount = e.target.elements.amount.value;
@@ -41,52 +42,50 @@ export function CreateTask() {
 
       console.log(description,amount,currency,deadline)
 
-      // Get price of ETH in selected Currency(TODO: implement ETN instead of ETH)
+      // Get price of ETN in selected Currency from CoinGecko
       const response = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=${currency}`
+        `https://api.coingecko.com/api/v3/simple/price?ids=electroneum&vs_currencies=${currency}`
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch ETH price');
+        throw new Error('Failed to fetch ETN price');
       }
 
       const priceData = await response.json();
-      const ethPrice = priceData.ethereum[currency];
+      const etnPrice = priceData.electroneum[currency];
 
-      console.log("ETH:", {ethPrice})
-      const ethAmount = amount / ethPrice;
+      console.log("ETN:", {etnPrice})
+      // Convert fiat to ETN
+      const etnAmount = amount / etnPrice;
+      const formattedEtnAmount = Number(etnAmount).toFixed(6);
 
-      const weiAmount = ethers.parseEther(ethAmount.toFixed(6).toString());
+      const weiAmount = ethers.parseEther(formattedEtnAmount);
 
-      // Show confirmation window with ETH to wei price
+      // Show confirmation window with ETN to wei price
       const confirmed = window.confirm(
-        `This task will cost ${ethAmount.toFixed(6)} ETH. Continue?`
+        `This task will cost ${formattedEtnAmount} ETN (${amount} ${currency.toUpperCase()}). Continue?`
       )
       if(confirmed) {
         // Call to backend to create the task
-        const response = await fetch('api/chainwork/createTask', {
-          method: 'POST', 
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            description,
-            deadline,
-            bounty: weiAmount.toString(),
-            fromAddress: account
-          })
-        });
+        const taskDetails = {
+          description,
+          deadline,
+          bounty: weiAmount.toString()
+        };
 
-        if(!response.ok) {
-          throw new Error('Failed to create task');
-        }
+        const txHash = await createTaskWithPayment(taskDetails, weiAmount);
+        console.log('Transaction hash:', txHash);
 
-        window.alert('Successfully created task!')
-        console.log('Success!')
+        alert('Task created successfully!');
+
+        e.target.reset;
       }
 
     } catch(error) {
-      console.error('Error creating task:', error)
+      console.error('Error creating task:', error);
+      alert(error.message)
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -148,6 +147,7 @@ export function CreateTask() {
                     <input
                       type="number"
                       name='amount'
+                      min={1}
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="$1000"
                     />
@@ -181,8 +181,15 @@ export function CreateTask() {
 
               <div className="flex justify-between pt-4">
                 <Button variant="secondary">Cancel</Button>
-                <Button type="submit">
-                  {isWalletConnected ? 'Create Task' : 'Connect Wallet'}
+                <Button 
+                  type="submit"
+                  disabled={submitting || loading || (account && !isEtnNetwork)}>
+                    {!account 
+                      ? 'LinkMetaMask' 
+                      : submitting 
+                        ? 'Create Task...' 
+                        : 'Create Task'
+                    }
                 </Button>
               </div>
             </form>

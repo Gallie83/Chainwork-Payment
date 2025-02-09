@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { connectWallet, handleNetworkChange } from '../utils/web3Utils';
+import { connectWallet, createEscrowPayment } from '../utils/web3Utils';
 
 const PaymentContext = createContext();
 
@@ -15,22 +15,35 @@ export const PaymentProvider = ({ children }) => {
     const [account, setAccount] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [isEtnNetwork, setIsEtnNetwork] = useState(null);
+
   
     useEffect(() => {
-      // Listen for account changes
-      if (window.ethereum) {
-        window.ethereum.on('accountsChanged', handleAccountChange);
-        window.ethereum.on('chainChanged', handleNetworkChange);
-      }
-  
-      return () => {
-        if (window.ethereum) {
-          window.ethereum.removeListener('accountsChanged', handleAccountChange);
-          window.ethereum.removeListener('chainChanged', handleNetworkChange);
+      // Ensure connection is to ETN network
+      const checkNetwork = async () => {
+        if(window.ethereum) {
+          const chainId = await window.ethereum.request({ method: 'eth_chainId'});
+          setIsEtnNetwork(chainId === '0xCB3E');
         }
-      };
-    }, []);
+      }
+
+      // Listeners for account/network changes
+      if(window.ethereum) {
+        window.ethereum.on('chainChanged:', checkNetwork);
+        window.ethereum.on('accountsChanged:', handleAccountChange);
+        if(account) checkNetwork();
+      }
+
+      // Clean up listeners for when component unmounts
+      return () => {
+        if(window.ethereum) {
+          window.ethereum.removeListener('chainChanged', checkNetwork);
+          window.ethereum.removeListener('accountChanged', handleAccountChange);
+        }
+      }
+    }, [account]);
   
+    // Handle when account switch in MetaMask
     const handleAccountChange = (accounts) => {
       if (accounts.length > 0) {
         setAccount(accounts[0]);
@@ -39,6 +52,7 @@ export const PaymentProvider = ({ children }) => {
       }
     };
   
+    // Initial wallet connection
     const handleConnect = async () => {
       try {
         setLoading(true);
@@ -86,6 +100,7 @@ export const PaymentProvider = ({ children }) => {
       account,
       loading,
       error,
+      isEtnNetwork,
       connectWallet: handleConnect,
       createTaskWithPayment
     };
