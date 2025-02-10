@@ -2,44 +2,62 @@ import { ethers } from 'ethers';
 
 export const setupETNNetwork = async () => {
   try {
+    const ETN_CHAIN_ID = '0xcb2e';
+    
+    // First check if already on ETN network
+    const currentChainId = await window.ethereum.request({ 
+      method: 'eth_chainId' 
+    });
+    
+    console.log('Current chain ID:', currentChainId);
+    console.log('Target ETN chain ID:', ETN_CHAIN_ID);
 
-    const ETN_CHAIN_ID = '0xCB3E'; // 52014 in hex
-    console.log('Attempting to add/switch to chain ID:', ETN_CHAIN_ID);
+    if (currentChainId.toLowerCase() === ETN_CHAIN_ID.toLowerCase()) {
+      console.log('Already on ETN network');
+      return;
+    }
 
-    // Try to switch to ETN network first
     try {
+      console.log('Attempting to switch to ETN network...');
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: ETN_CHAIN_ID }],
+        params: [{ chainId: ETN_CHAIN_ID }]
       });
     } catch (switchError) {
-      console.log("SWITCH ERROR:", switchError);
-
-      // Network hasn't been added yet
       if (switchError.code === 4902) {
-        console.log("Network not found, attempting to add...");
+        console.log('Network not found, attempting to add...');
+        
+        // Wait a brief moment before adding network
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const addNetworkParams = {
+          chainId: ETN_CHAIN_ID,
+          chainName: 'Electroneum Smart Chain Mainnet',
+          nativeCurrency: {
+            name: 'Electroneum',
+            symbol: 'ETN',
+            decimals: 18
+          },
+          rpcUrls: ['https://rpc.electroneum.com'],
+          blockExplorerUrls: ['https://blockexplorer.electroneum.com']
+        };
+
+        console.log('Adding network with params:', addNetworkParams);
+
+        // Try to add the network
         await window.ethereum.request({
           method: 'wallet_addEthereumChain',
-          params: [{
-            chainId: ETN_CHAIN_ID,
-            chainName: 'Electroneum Smart Chain Mainnet',
-            nativeCurrency: {
-              name: 'Electroneum',
-              symbol: 'ETN',
-              decimals: 18
-            },
-            rpcUrls: ['https://rpc.electroneum.com'],
-            blockExplorerUrls: ['https://blockexplorer.electroneum.com']
-          }]
+          params: [addNetworkParams]
         });
       } else {
+        console.error('Switch network error:', switchError);
         throw switchError;
       }
     }
-} catch (error) {
-  console.error('Error setting up ETN network:', error);
-  throw error;
-}
+  } catch (error) {
+    console.error('Error setting up ETN network:', error);
+    throw error;
+  }
 };
 
 export const connectWallet = async () => {
@@ -80,7 +98,14 @@ export const createEscrowPayment = async (fromAddress, taskDetails, weiAmount) =
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create task on backend');
+      // Task creation is failing here
+      const errorData = await response.json();
+      console.error('Backend error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: errorData
+      });
+      throw new Error(`Failed to create task: ${response.status} ${response.statusText}`);
     }
 
     const { contractAddress, data } = await response.json();

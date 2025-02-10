@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { usePayment } from '../Context/PaymentContext';
@@ -10,13 +10,18 @@ export function CreateTask() {
   
   const { 
     account, 
-    loading, 
-    error, 
-    isEtnNetwork, 
     connectWallet, 
     createTaskWithPayment
   } = usePayment();
 
+  // Set closest deadling that can be entered as tomorrow
+  const minDate = useMemo(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().slice(0,10);
+  }, [])
+
+  // Submits form to create a task
   const handleSubmit = async(e) => {
     e.preventDefault();
 
@@ -26,10 +31,6 @@ export function CreateTask() {
         await connectWallet();
         // Exit function after conneting wallet
         return; 
-      }
-      // Check network
-      if(!isEtnNetwork) {
-        throw new Error('Please switch to Electroneum network on MetaMask')
       }
 
       setSubmitting(true);
@@ -105,7 +106,7 @@ export function CreateTask() {
         <Card>
           <Card.Content>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Title*
                 </label>
@@ -114,7 +115,7 @@ export function CreateTask() {
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Write a clear and descriptive title"
                 />
-              </div>
+              </div> */}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -124,10 +125,11 @@ export function CreateTask() {
                   name='description'
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[150px]"
                   placeholder="Describe the task in detail..."
+                  required
                 />
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Category*
                 </label>
@@ -135,7 +137,7 @@ export function CreateTask() {
                   type="text"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-              </div>
+              </div> */}
 
               <div>
                 <h3 className="text-lg font-semibold mb-4">Bounty</h3>
@@ -150,6 +152,7 @@ export function CreateTask() {
                       min={1}
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="$1000"
+                      required
                     />
                   </div>
 
@@ -157,7 +160,10 @@ export function CreateTask() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Currency*
                     </label>
-                    <select name="currency" className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select 
+                      name="currency" 
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required>
                       <option value="">Select currency</option>
                       <option value="USD">USD</option>
                       <option value="EUR">EUR</option>
@@ -175,7 +181,8 @@ export function CreateTask() {
                   type="date"
                   name="deadline"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  min={new Date().toISOString().slice(0, 16)} // Prevents selecting past dates
+                  min={minDate}
+                  required
                 />
               </div>
 
@@ -183,7 +190,8 @@ export function CreateTask() {
                 <Button variant="secondary">Cancel</Button>
                 <Button 
                   type="submit"
-                  disabled={submitting || loading || (account && !isEtnNetwork)}>
+                  // disabled={submitting || loading || (account && !isEtnNetwork)}
+                  >
                     {!account 
                       ? 'LinkMetaMask' 
                       : submitting 

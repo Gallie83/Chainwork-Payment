@@ -17,7 +17,29 @@ export const PaymentProvider = ({ children }) => {
     const [error, setError] = useState(null);
     const [isEtnNetwork, setIsEtnNetwork] = useState(null);
 
+    useEffect(() => {
+      const checkConnection = async () => {
+        if(window.ethereum) {
+          try {
+            const accounts = await window.ethereum.request({
+              method: 'eth_accounts'
+            });
+            if(accounts.length > 0) {
+              setAccount(accounts[0]);
+              const chainId = await window.ethereum.request({
+                method: 'eth_chainId'
+              });
+              setIsEtnNetwork(chainId === '0xcb2e');
+            }
+          } catch(error) {
+            console.error('Error checking connection:', error);
+          }
+        }
+      }
   
+      checkConnection();
+    }, [])
+     
     useEffect(() => {
       // Ensure connection is to ETN network
       const checkNetwork = async () => {
@@ -98,9 +120,11 @@ export const PaymentProvider = ({ children }) => {
   
     const value = {
       account,
+      setAccount,
       loading,
       error,
       isEtnNetwork,
+      setIsEtnNetwork,
       connectWallet: handleConnect,
       createTaskWithPayment
     };
