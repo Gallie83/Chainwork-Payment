@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 
 const CONTRACT_ADDRESS = '0xBe6d390F58031329aD59F75df1E1359DAa4cA8a1';
 const CHAIN_ID = 52014;
+const USE_MOCKS = true; 
 
 const ABI = [
   "function createTask(string memory _description, uint256 _deadline) external payable",
@@ -17,7 +18,40 @@ const ABI = [
   "event TaskCompleted(uint256 taskId, address[] selectedFreelancers, uint256 bounty)"
 ];
 
+// Mock contract for demo purposes
+const mockContract = {
+  createTask: async () => ({
+    wait: async () => ({ status: 1 })
+  }),
+  getTask: async (id) => ({
+    id,
+    taskProvider: "0x" + "1".repeat(40),
+    description: `Task ${id}`,
+    bounty: ethers.parseEther("1.5"),
+    isCompleted: false,
+    isCancelled: false,
+    selectedFreelancers: [],
+    deadline: Math.floor(Date.now() / 1000) + 86400 * 7
+  }),
+  getCounter: async () => 2,
+  getSubmissions: async () => [],
+  approveSubmission: async () => ({
+    wait: async () => ({ status: 1 })
+  }),
+  cancelTask: async () => ({
+    wait: async () => ({ status: 1 })
+  }),
+  submitWork: async () => ({
+    wait: async () => ({ status: 1 })
+  })
+};
+
 export const getContract = async () => {
+  if (USE_MOCKS) {
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
+    return mockContract;
+  }
+
   if (!window.ethereum) throw new Error("No crypto wallet found");
 
   await window.ethereum.request({
@@ -37,7 +71,7 @@ export const switchToElectroneum = async () => {
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
     });
-  } catch (error: any) {
+  } catch (error) {
     if (error.code === 4902) {
       await window.ethereum.request({
         method: 'wallet_addEthereumChain',

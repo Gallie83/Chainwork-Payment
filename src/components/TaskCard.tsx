@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, DollarSign, User } from "lucide-react";
 import { formatDate } from "@/lib/contract";
 import { Link } from "react-router-dom";
+import { ethers } from "ethers";
 
 interface TaskCardProps {
   id: number;
@@ -36,6 +37,23 @@ export const TaskCard = ({
     return <Badge className="bg-blue-500">Active</Badge>;
   };
 
+  // Format the bounty value
+  const displayBounty = (bounty: number | bigint | string): string => {
+    try {
+      // If it's already a number, just format it
+      if (typeof bounty === 'number') {
+        return bounty.toFixed(2);
+      }
+      
+      // If it's a BigInt or string representation
+      return ethers.formatEther(bounty.toString());
+    } catch (error) {
+      console.error("Error formatting bounty:", error);
+      // Fallback to just returning the value as is
+      return bounty.toString();
+    }
+  };
+
   return (
     <Card className="w-full hover:shadow-lg transition-shadow duration-200">
       <CardHeader>
@@ -51,7 +69,7 @@ export const TaskCard = ({
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-emerald-500" />
-          <span>{bounty} ETN</span>
+          <span>{displayBounty(bounty)} ETN</span>
         </div>
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-blue-500" />

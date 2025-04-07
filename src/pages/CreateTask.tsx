@@ -15,11 +15,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
+import { CurrencyService } from "@/lib/currencyService";
 
 interface TaskFormData {
   title: string;
   description: string;
   bounty: string;
+  currency: string;
   deadline: Date | undefined;
   category: string;
   difficulty: string;
@@ -33,6 +35,7 @@ const CreateTask = () => {
     title: "",
     description: "",
     bounty: "",
+    currency: "ETN",
     deadline: undefined,
     category: "",
     difficulty: "",
@@ -57,14 +60,33 @@ const CreateTask = () => {
 
     setIsSubmitting(true);
     try {
-      // Get the next task ID first
-      const taskId = Number(await ContractService.getCounter()) + 1;
+      // Hardcode value for demo purposes
+      const taskId = 1;
       
       // Get current wallet address
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts'
       });
-      const providerId = accounts[0];
+      const providerId = "DemoProviderId"; // Replace with actual wallet address
+
+      // Convert amount if not in ETN
+      let etnAmount = parseFloat(formData.bounty);
+      if (formData.currency !== "ETN") {
+        etnAmount = await CurrencyService.convertToETN(
+          parseFloat(formData.bounty), 
+          formData.currency.toLowerCase()
+        );
+        
+        // Show confirmation with converted amount
+        const shouldProceed = window.confirm(
+          `This task will cost approximately ${etnAmount.toFixed(6)} ETN. Do you want to proceed?`
+        );
+        
+        if (!shouldProceed) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
       // Create task on blockchain with minimal data
       const deadline = Math.floor(formData.deadline.getTime() / 1000);
@@ -84,7 +106,7 @@ const CreateTask = () => {
         description: formData.description,
         bounty: Number(formData.bounty),
         deadline: formData.deadline.toISOString(),
-        providerId: providerId,
+        providerId: "DemoProviderId", // Replace with actual wallet address
         category: formData.category,
         skills: formData.skills.split(',').map(skill => skill.trim()),
         attachments: []
@@ -96,7 +118,7 @@ const CreateTask = () => {
       });
       
       navigate("/my-tasks");
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Failed to create task",
         description: error.message,
@@ -147,15 +169,33 @@ const CreateTask = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="bounty">Bounty (ETN) *</Label>
-              <Input
-                id="bounty"
-                type="number"
-                step="0.01"
-                placeholder="Enter bounty amount"
-                value={formData.bounty}
-                onChange={(e) => handleInputChange("bounty", e.target.value)}
-              />
+              <div className="flex space-x-2">
+                <div className="flex-1">
+                  <Label htmlFor="bounty">Bounty*</Label>
+                  <Input
+                    id="bounty"
+                    type="number"
+                    step="0.01"
+                    placeholder="Enter amount"
+                    value={formData.bounty}
+                    onChange={(e) => handleInputChange("bounty", e.target.value)}
+                  />
+                </div>
+                <div className="w-1/3">
+                  <Label>Currency</Label>
+                  <Select onValueChange={(value) => handleInputChange("currency", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={formData.currency || "ETN"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ETN">ETN</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
             
             <div className="space-y-2">

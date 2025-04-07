@@ -10,6 +10,7 @@ import { Clock, DollarSign, AlertCircle } from "lucide-react";
 import { formatDate, formatAmount } from "@/lib/contract";
 import { taskApi } from "../lib/api";
 import { format } from "path";
+import { ethers } from "ethers";
 
 interface Task {
   id: number;
@@ -31,38 +32,56 @@ const MyTasks = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const USE_MOCKS = true;
+
+  console.log("tasks", tasks);
+
   const loadTasks = async () => {
     try {
-      const contract = await getContract();
-      const counter = await contract.getCounter();
-      const taskPromises = [];
-      const submissionPromises = [];
-
-      for (let i = 1; i <= counter; i++) {
-        taskPromises.push(contract.getTask(i));
-        submissionPromises.push(contract.getSubmissions(i));
-      }
-
-      const tasksData = await Promise.all(taskPromises);
-      const submissionsData = await Promise.all(submissionPromises);
-
-      const currentAccount = await window.ethereum.request({
+      setLoading(true);
+      
+      // Get current wallet address
+      const accounts = await window.ethereum.request({
         method: 'eth_accounts'
       });
-
-      const formattedTasks = tasksData
-        .map((task, index) => ({
-          id: Number(task[0]),
-          taskProvider: task[1],  // Added this field in mapping
-          description: task[2],
-          bounty: task[3],
-          deadline: Number(task[7]),
-          isCompleted: task[4],
-          isCancelled: task[5],
-          submissions: submissionsData[index]
-        }))
-        .filter(task => task.id > 0 && currentAccount[0].toLowerCase() === task.taskProvider.toLowerCase());  // Updated to use taskProvider
-
+      const currentAccount = accounts[0];
+      
+      if (USE_MOCKS) {
+        // Mock implementation
+        const backendTasks = await taskApi.getAllTasks();
+        // Filter for tasks created by the current user
+        const myTasks = backendTasks.filter(task => 
+          task.providerId === "DemoProviderId"
+        );
+        setTasks(myTasks);
+      } else {
+        // Non-demo blockchain implementation
+        const contract = await getContract();
+        const counter = await contract.getCounter();
+        const taskPromises = [];
+        const submissionPromises = [];
+   
+        for (let i = 1; i <= counter; i++) {
+          taskPromises.push(contract.getTask(i));
+          submissionPromises.push(contract.getSubmissions(i));
+        }
+   
+        const tasksData = await Promise.all(taskPromises);
+        const submissionsData = await Promise.all(submissionPromises);
+   
+        const formattedTasks = tasksData
+          .map((task, index) => ({
+            id: Number(task[0]),
+            taskProvider: task[1],
+            description: task[2],
+            bounty: task[3],
+            deadline: Number(task[7]),
+            isCompleted: task[4],
+            isCancelled: task[5],
+            submissions: submissionsData[index] || []
+          }))
+          .filter(task => task.id > 0 && currentAccount.toLowerCase() === task.taskProvider.toLowerCase());
+   
         // Combine smart contract tasks with backend tasks
         try {
           const backendTasks = await taskApi.getAllTasks();
@@ -83,6 +102,7 @@ const MyTasks = () => {
                 // If task is not found in backend, create it
                 try {
                   const newTaskData = {
+                    id: formattedTask.id,
                     title: formattedTask.description, // Blockchain description is title
                     description: formattedTask.description, // Use title as description initially
                     bounty: Number(formattedTask.bounty),
@@ -92,9 +112,9 @@ const MyTasks = () => {
                     skills: [],
                     attachments: []
                   };
-
+   
                   const createdTask = await taskApi.createTask(newTaskData);
-
+   
                   const combinedTask = {
                     ...createdTask,
                     bounty: formattedTask.bounty,
@@ -115,14 +135,15 @@ const MyTasks = () => {
                     attachments: []
                   };
                 }
-            }})
+              }
+            })
           );
+          setTasks(combinedTasks);
         } catch (error) {
           console.error("Failed to get tasks from backend", error);
           setTasks(formattedTasks);
         }
-
-      setTasks(formattedTasks);
+      }
     } catch (error) {
       toast({
         title: "Failed to load tasks",
@@ -132,11 +153,11 @@ const MyTasks = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
+   };
+   
+   useEffect(() => {
     loadTasks();
-  }, []);
+   }, []);
 
   const handleApproveSubmission = async (taskId: number, freelancerAddress: string) => {
     try {
@@ -245,6 +266,23 @@ const TaskCard = ({
   onCancel: (taskId: number) => Promise<void>;
 }) => {
   const isExpired = Date.now() > task.deadline * 1000;
+
+  // Format the bounty value
+  const displayBounty = (bounty: number | bigint | string): string => {
+    try {
+      // If it's already a number, just format it
+      if (typeof bounty === 'number') {
+        return bounty.toFixed(2);
+      }
+      
+      // If it's a BigInt or string representation
+      return ethers.formatEther(bounty.toString());
+    } catch (error) {
+      console.error("Error formatting bounty:", error);
+      // Fallback to just returning the value as is
+      return bounty.toString();
+    }
+  };
   
   return (
     <Card>
@@ -264,7 +302,7 @@ const TaskCard = ({
           <div className="flex gap-4">
             <div className="flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-emerald-500" />
-              <span>{formatAmount(task.bounty)} ETN</span>
+              <span>{displayBounty(task.bounty)} ETN</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-blue-500" />
@@ -272,10 +310,10 @@ const TaskCard = ({
             </div>
           </div>
 
-          {task.submissions.length > 0 ? (
+          {task.submissions?.length > 0 ? (
             <div className="space-y-4">
-              <h4 className="font-medium">Submissions ({task.submissions.length})</h4>
-              {task.submissions.map((submission, index) => (
+              <h4 className="font-medium">Submissions ({task.submissions?.length})</h4>
+              {task.submissions?.map((submission, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{submission.freelancer.slice(0, 6)}...{submission.freelancer.slice(-4)}</p>
@@ -298,7 +336,7 @@ const TaskCard = ({
             </div>
           )}
 
-          {!task.isCompleted && !task.isCancelled && task.submissions.length === 0 && (
+          {!task.isCompleted && !task.isCancelled && task.submissions?.length === 0 && (
             <Button 
               variant="destructive" 
               onClick={() => onCancel(task.id)}
