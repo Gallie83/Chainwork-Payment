@@ -14,7 +14,8 @@ import { ethers } from "ethers";
 
 interface Task {
   id: number;
-  taskProvider: string;  // Added this field
+  title: string;
+  taskProvider: string;
   description: string;
   bounty: bigint;
   deadline: number;
@@ -72,6 +73,7 @@ const MyTasks = () => {
         const formattedTasks = tasksData
           .map((task, index) => ({
             id: Number(task[0]),
+            title: task[1],
             taskProvider: task[1],
             description: task[2],
             bounty: task[3],
@@ -289,7 +291,7 @@ const TaskCard = ({
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle>Task #{task.id}</CardTitle>
+            <CardTitle>{task.title}</CardTitle>
             <CardDescription className="mt-2 line-clamp-2">{task.description}</CardDescription>
           </div>
           <Badge variant={task.isCompleted ? "default" : task.isCancelled ? "destructive" : "secondary"}>

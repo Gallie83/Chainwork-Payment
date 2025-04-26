@@ -60,14 +60,28 @@ const CreateTask = () => {
 
     setIsSubmitting(true);
     try {
-      // Hardcode value for demo purposes
-      const taskId = 1;
-      
       // Get current wallet address
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts'
       });
-      const providerId = "DemoProviderId"; // Replace with actual wallet address
+
+      // If MetaMask is not connected, prompt user to connect
+      if (!accounts || accounts.length === 0) {
+        toast({
+          title: "Wallet not connected",
+          description: "Please connect your MetaMask wallet to create a task",
+          variant: "destructive",
+        });
+        
+        await window.ethereum.request({
+          method: 'eth_requestAccounts'
+        });
+        
+        return;
+      }
+
+      // Hardcode value for demo purposes
+      const taskId = 1;
 
       // Convert amount if not in ETN
       let etnAmount = parseFloat(formData.bounty);
