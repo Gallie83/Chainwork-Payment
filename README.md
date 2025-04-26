@@ -69,7 +69,7 @@ The final payment integration uses a modular service-based architecture:
 
 ### **Installation**
 
-1. Clone the repository and navigate to the frontend folder:
+1. Clone the repository:
    ```bash
    git clone https://github.com/Gallie83/Chainwork-Payment.git
    ```
@@ -126,12 +126,6 @@ _Note: This demo includes mock data and simulated responses for portfolio demons
 
 ---
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
-
----
-
 ## Contact
 
-For queries, feedback, or contributions, feel free to reach out at [gallie2913@gmail.com].
+For queries, feedback, or contributions, feel free to reach out at gallie2913@gmail.com.
