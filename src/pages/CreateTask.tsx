@@ -43,6 +43,7 @@ const CreateTask = () => {
     skills: "",
     requirements: ""
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -113,13 +114,15 @@ const CreateTask = () => {
       // Wait for transaction confirmation
       await tx.wait();
 
+      console.log("Deadline:", deadline)
+
       // After successful blockchain transaction, create detailed task in backend
       await taskApi.createTask({
         id: Number(taskId),
         title: formData.title,
         description: formData.description,
         bounty: Number(formData.bounty),
-        deadline: formData.deadline.toISOString(),
+        deadline: Math.floor(formData.deadline.getTime() / 1000).toString(),
         providerId: "DemoProviderId", // Replace with actual wallet address
         category: formData.category,
         skills: formData.skills.split(',').map(skill => skill.trim()),
